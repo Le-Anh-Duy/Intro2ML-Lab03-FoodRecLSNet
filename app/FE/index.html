@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhận diện Món Ăn Việt Nam</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .upload-section:hover {
+            background: #eef1ff;
+            border-color: #764ba2;
+        }
+
+        .upload-section.dragover {
+            background: #e3e7ff;
+            border-color: #667eea;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .canvas-container {
+            display: none;
+            margin-top: 30px;
+            position: relative;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 100%;
+            width: 100%;
+        }
+
+        #imageCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            cursor: crosshair;
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+
+        .instructions {
+            background: #fff9e6;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .instructions h3 {
+            color: #f57f17;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+            color: #666;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f0f7ff;
+            border-radius: 15px;
+            border: 2px solid #667eea;
+        }
+
+        .result-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .result-confidence {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .selection-info {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍜 Nhận Diện Món Ăn Việt Nam</h1>
+        <p class="subtitle">Tải ảnh lên, khoanh vùng món ăn và nhận kết quả ngay!</p>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">📸</div>
+            <div class="upload-text">Kéo thả ảnh vào đây hoặc nhấn để chọn file</div>
+            <div class="upload-subtext">Hỗ trợ: JPG, PNG, JPEG</div>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <div class="canvas-container" id="canvasContainer">
+            <div style="text-align: center;">
+                <div class="canvas-wrapper">
+                    <canvas id="imageCanvas"></canvas>
+                    <canvas id="overlayCanvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="selection-info" id="selectionInfo">
+                Nhấn và kéo chuột trên ảnh để khoanh vùng món ăn
+            </div>
+
+            <div class="controls">
+                <button class="btn-primary" id="predictBtn" disabled>
+                    🔍 Nhận Diện
+                </button>
+                <button class="btn-secondary" id="resetSelectionBtn">
+                    ↺ Xóa Vùng Chọn
+                </button>
+                <button class="btn-danger" id="clearBtn">
+                    🗑️ Xóa Ảnh
+                </button>
+            </div>
+
+            <div class="instructions">
+                <h3>📋 Hướng dẫn sử dụng:</h3>
+                <ul>
+                    <li>Nhấn và kéo chuột trên ảnh để tạo vùng chọn (hình chữ nhật)</li>
+                    <li>Vùng chọn sẽ được đánh dấu bằng khung màu xanh</li>
+                    <li>Có thể tạo lại vùng chọn bằng cách kéo chuột lần nữa</li>
+                    <li>Nhấn "Nhận Diện" để phân tích món ăn trong vùng đã chọn</li>
+                    <li>Nếu không khoanh vùng, hệ thống sẽ phân tích toàn bộ ảnh</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #667eea; font-weight: bold;">Đang phân tích...</p>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <h2>🎯 Kết Quả Nhận Diện</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const predictBtn = document.getElementById('predictBtn');
+        const resetSelectionBtn = document.getElementById('resetSelectionBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const selectionInfo = document.getElementById('selectionInfo');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        const resultContent = document.getElementById('resultContent');
+
+        let currentImage = null;
+        let isDrawing = false;
+        let startX, startY;
+        let selection = null;
+
+        // Upload section click
+        uploadSection.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Handle file upload
+        function handleFile(file) {
+            if (!file.type.match('image.*')) {
+                alert('Vui lòng chọn file ảnh!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    currentImage = img;
+                    
+                    // Show container FIRST so getBoundingClientRect works correctly
+                    uploadSection.style.display = 'none';
+                    canvasContainer.style.display = 'block';
+                    resultSection.style.display = 'none';
+                    
+                    // Now display image and setup overlay
+                    displayImage();
+                    
+                    selection = null;
+                    predictBtn.disabled = false;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Display image on canvas
+        function displayImage() {
+            // Image canvas keeps original resolution for quality
+            canvas.width = currentImage.width;
+            canvas.height = currentImage.height;
+            ctx.drawImage(currentImage, 0, 0, currentImage.width, currentImage.height);
+            
+            // Update overlay to match screen display size
+            updateOverlaySize();
+        }
+
+        function updateOverlaySize() {
+            const rect = canvas.getBoundingClientRect();
+            // Set overlay resolution to match display size (screen pixels)
+            overlayCanvas.width = rect.width;
+            overlayCanvas.height = rect.height;
+            
+            // Redraw selection if exists
+            if (selection) {
+                const scaleX = rect.width / currentImage.width;
+                const scaleY = rect.height / currentImage.height;
+                drawSelection(
+                    selection.x * scaleX,
+                    selection.y * scaleY,
+                    (selection.x * scaleX) + (selection.width * scaleX),
+                    (selection.y * scaleY) + (selection.height * scaleY)
+                );
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (currentImage) {
+                updateOverlaySize();
+            }
+        });
+        
+        // Draw selection on overlay (using screen coordinates)
+        function drawSelection(x1, y1, x2, y2) {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            
+            // Fixed sharp line width
+            const lineWidth = 2;
+            
+            // 1. White outline for contrast
+            overlayCtx.strokeStyle = '#ffffff';
+            overlayCtx.lineWidth = lineWidth + 2;
+            overlayCtx.setLineDash([6, 6]);
+            overlayCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+            // 2. Main colored line
+            overlayCtx.strokeStyle = '#0057ff';
+            overlayCtx.lineWidth = lineWidth;
+            overlayCtx.setLineDash([6, 6]);
+            overlayCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            
+            overlayCtx.setLineDash([]);
+            
+            // Fill with semi-transparent
+            overlayCtx.fillStyle = 'rgba(0, 87, 255, 0.15)';
+            overlayCtx.fillRect(x1, y1, x2 - x1, y2 - y1);
+        }
+
+        // Get coordinates relative to the displayed element (screen pixels)
+        function getScreenCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        // Mouse events for selection
+        canvas.addEventListener('mousedown', (e) => {
+            const coords = getScreenCoordinates(e);
+            startX = coords.x;
+            startY = coords.y;
+            isDrawing = true;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+
+            const coords = getScreenCoordinates(e);
+            drawSelection(startX, startY, coords.x, coords.y);
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing) return;
+
+            const coords = getScreenCoordinates(e);
+            
+            // Calculate selection in Image Coordinates for backend
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = currentImage.width / rect.width;
+            const scaleY = currentImage.height / rect.height;
+
+            // Convert screen coords to image coords
+            const x1_img = startX * scaleX;
+            const y1_img = startY * scaleY;
+            const x2_img = coords.x * scaleX;
+            const y2_img = coords.y * scaleY;
+
+            selection = {
+                x: Math.min(x1_img, x2_img),
+                y: Math.min(y1_img, y2_img),
+                width: Math.abs(x2_img - x1_img),
+                height: Math.abs(y2_img - y1_img)
+            };
+
+            isDrawing = false;
+
+            // Update info
+            if (selection.width > 5 && selection.height > 5) {
+                selectionInfo.textContent = `Đã chọn vùng: ${Math.round(selection.width)}x${Math.round(selection.height)} pixels (trên ảnh gốc)`;
+            } else {
+                selection = null;
+                selectionInfo.textContent = 'Nhấn và kéo chuột trên ảnh để khoanh vùng món ăn';
+            }
+        });
+
+        // Reset selection
+        resetSelectionBtn.addEventListener('click', () => {
+            selection = null;
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            selectionInfo.textContent = 'Nhấn và kéo chuột trên ảnh để khoanh vùng món ăn';
+        });
+
+        // Clear image
+        clearBtn.addEventListener('click', () => {
+            currentImage = null;
+            selection = null;
+            canvasContainer.style.display = 'none';
+            uploadSection.style.display = 'block';
+            resultSection.style.display = 'none';
+            fileInput.value = '';
+        });
+
+        // Predict button
+        predictBtn.addEventListener('click', async () => {
+            loading.style.display = 'block';
+            resultSection.style.display = 'none';
+            predictBtn.disabled = true;
+
+            try {
+                // Get image data from canvas
+                const imageData = canvas.toDataURL('image/jpeg');
+
+                // Prepare request data
+                const requestData = {
+                    image: imageData,
+                    selection: selection
+                };
+
+                // Send to backend
+                const response = await fetch('http://localhost:5000/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Lỗi kết nối đến server');
+                }
+
+                const result = await response.json();
+                displayResults(result);
+
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+                console.error('Error:', error);
+            } finally {
+                loading.style.display = 'none';
+                predictBtn.disabled = false;
+            }
+        });
+
+        // Display results
+        function displayResults(result) {
+            resultContent.innerHTML = '';
+
+            if (result.predictions && result.predictions.length > 0) {
+                result.predictions.forEach(pred => {
+                    const item = document.createElement('div');
+                    item.className = 'result-item';
+                    item.innerHTML = `
+                        <span class="result-name">${pred.name}</span>
+                        <span class="result-confidence">${(pred.confidence * 100).toFixed(1)}%</span>
+                    `;
+                    resultContent.appendChild(item);
+                });
+            } else {
+                resultContent.innerHTML = '<p style="text-align: center; color: #666;">Không tìm thấy món ăn nào</p>';
+            }
+
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>
