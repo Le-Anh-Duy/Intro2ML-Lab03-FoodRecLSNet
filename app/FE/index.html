@@ -123,6 +123,25 @@
             margin-top: 20px;
             justify-content: center;
             flex-wrap: wrap;
+            align-items: center; /* Căn giữa theo chiều dọc */
+        }
+
+        /* Thêm CSS cho Select Box */
+        .model-select {
+            padding: 12px 15px;
+            font-size: 1em;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background-color: white;
+            color: #333;
+            cursor: pointer;
+            outline: none;
+            min-width: 200px;
+            font-family: inherit;
+        }
+
+        .model-select:hover {
+            border-color: #764ba2;
         }
 
         button {
@@ -204,10 +223,36 @@
             border: 2px solid #667eea;
         }
 
+        .result-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .result-predictions {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .result-image-container {
+            flex: 1;
+            min-width: 300px;
+            display: none; /* Hidden by default */
+            text-align: center;
+        }
+
+        .result-image-container img {
+            max-width: 100%;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
         .result-section h2 {
             color: #333;
             margin-bottom: 15px;
             text-align: center;
+            width: 100%;
         }
 
         .result-item {
@@ -289,6 +334,10 @@
             </div>
 
             <div class="controls">
+                <select id="modelSelect" class="model-select">
+                    <option value="" disabled selected>Đang tải danh sách mô hình...</option>
+                </select>
+
                 <button class="btn-primary" id="predictBtn" disabled>
                     🔍 Nhận Diện
                 </button>
@@ -319,7 +368,13 @@
 
         <div class="result-section" id="resultSection">
             <h2>🎯 Kết Quả Nhận Diện</h2>
-            <div id="resultContent"></div>
+            <div class="result-container">
+                <div class="result-predictions" id="resultContent"></div>
+                <div class="result-image-container" id="resultImageContainer">
+                    <h3 style="margin-bottom: 10px; color: #555;">Ảnh kết quả</h3>
+                    <img id="resultImage" src="" alt="Detection Result">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -338,11 +393,45 @@
         const loading = document.getElementById('loading');
         const resultSection = document.getElementById('resultSection');
         const resultContent = document.getElementById('resultContent');
+        const modelSelect = document.getElementById('modelSelect');
+        const resultImageContainer = document.getElementById('resultImageContainer');
+        const resultImage = document.getElementById('resultImage');
 
         let currentImage = null;
         let isDrawing = false;
         let startX, startY;
         let selection = null;
+
+        // --- LOAD MODELS ---
+        async function loadModels() {
+            try {
+                const response = await fetch('http://localhost:5000/models');
+                const data = await response.json();
+                
+                modelSelect.innerHTML = ''; // Clear old options
+                
+                if (data.success && data.models && data.models.length > 0) {
+                    data.models.forEach((model, index) => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.text = model.name; 
+                        if (index === 0) option.selected = true;
+                        modelSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.text = "Không có mô hình nào";
+                    modelSelect.appendChild(option);
+                    predictBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error("Lỗi tải danh sách model:", error);
+                modelSelect.innerHTML = '<option>Lỗi kết nối Server</option>';
+            }
+        }
+
+        // Load models on startup
+        document.addEventListener('DOMContentLoaded', loadModels);
 
         // Upload section click
         uploadSection.addEventListener('click', () => fileInput.click());
@@ -546,13 +635,39 @@
             predictBtn.disabled = true;
 
             try {
-                // Get image data from canvas
-                const imageData = canvas.toDataURL('image/jpeg');
+                let imageData;
+                
+                // If there's a selection, crop the image to that region
+                if (selection && selection.width > 5 && selection.height > 5) {
+                    // Create a temporary canvas for cropping
+                    const cropCanvas = document.createElement('canvas');
+                    const cropCtx = cropCanvas.getContext('2d');
+                    
+                    // Set crop canvas size to selection size
+                    cropCanvas.width = selection.width;
+                    cropCanvas.height = selection.height;
+                    
+                    // Draw only the selected region from the original image
+                    cropCtx.drawImage(
+                        currentImage,
+                        selection.x, selection.y, selection.width, selection.height,  // Source rectangle
+                        0, 0, selection.width, selection.height                        // Destination rectangle
+                    );
+                    
+                    // Get cropped image data
+                    imageData = cropCanvas.toDataURL('image/jpeg');
+                } else {
+                    // No selection, send full image
+                    imageData = canvas.toDataURL('image/jpeg');
+                }
+                
+                // Get selected model
+                const selectedModel = modelSelect.value;
 
-                // Prepare request data
+                // Prepare request data (no selection field needed)
                 const requestData = {
                     image: imageData,
-                    selection: selection
+                    model_id: selectedModel
                 };
 
                 // Send to backend
@@ -584,6 +699,7 @@
         function displayResults(result) {
             resultContent.innerHTML = '';
 
+            // Handle predictions list
             if (result.predictions && result.predictions.length > 0) {
                 result.predictions.forEach(pred => {
                     const item = document.createElement('div');
@@ -596,6 +712,15 @@
                 });
             } else {
                 resultContent.innerHTML = '<p style="text-align: center; color: #666;">Không tìm thấy món ăn nào</p>';
+            }
+
+            // Handle result image
+            if (result.result_image) {
+                resultImage.src = 'data:image/jpeg;base64,' + result.result_image;
+                resultImageContainer.style.display = 'block';
+            } else {
+                resultImageContainer.style.display = 'none';
+                resultImage.src = '';
             }
 
             resultSection.style.display = 'block';
