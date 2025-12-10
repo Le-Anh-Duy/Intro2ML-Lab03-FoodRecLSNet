@@ -304,19 +304,8 @@ def predict():
             scores = bboxes[:, -1]
             inds = scores > score_thr
 
-            # remove same labels (get only highest score for each label)
-            unique_labels = {}
-
-            for label, bbox in zip(labels[inds], bboxes[inds]):
-                score = bbox[-1]
-                if label not in unique_labels or score > unique_labels[label][-1]:
-                    unique_labels[label] = bbox
-
-            bboxes = np.array(list(unique_labels.values()))
-            labels = np.array(list(unique_labels.keys()))
-
-            # bboxes = bboxes[inds, :]
-            # labels = labels[inds]
+            bboxes = bboxes[inds, :]
+            labels = labels[inds]
             
             if len(bboxes) > 0:
                 # NMS
@@ -367,6 +356,14 @@ def predict():
             
             # Sort predictions by confidence
             predictions.sort(key=lambda x: x['confidence'], reverse=True)
+
+            # unique labels for predictions
+            unique_labels = {}
+            for pred in predictions:
+                if pred['name'] not in unique_labels:
+                    unique_labels[pred['name']] = pred
+
+            predictions = list(unique_labels.values())
 
         return jsonify({
             'success': True,
