@@ -1,2 +1,3 @@
 dumps/*
 pretrained/*
+__pycache__/

@@ -303,8 +303,20 @@ def predict():
             score_thr = 0.3
             scores = bboxes[:, -1]
             inds = scores > score_thr
-            bboxes = bboxes[inds, :]
-            labels = labels[inds]
+
+            # remove same labels (get only highest score for each label)
+            unique_labels = {}
+
+            for label, bbox in zip(labels[inds], bboxes[inds]):
+                score = bbox[-1]
+                if label not in unique_labels or score > unique_labels[label][-1]:
+                    unique_labels[label] = bbox
+
+            bboxes = np.array(list(unique_labels.values()))
+            labels = np.array(list(unique_labels.keys()))
+
+            # bboxes = bboxes[inds, :]
+            # labels = labels[inds]
             
             if len(bboxes) > 0:
                 # NMS
@@ -359,7 +371,7 @@ def predict():
         return jsonify({
             'success': True,
             # get at most 5 predictions
-            'predictions': predictions[:5],
+            'predictions': predictions,
             'model_used': model_id,
             'result_image': result_image_b64
         }), 200
