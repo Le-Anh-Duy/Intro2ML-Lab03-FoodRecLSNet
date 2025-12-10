@@ -177,14 +177,11 @@ def load_models():
                     model = init_detector(cfg, weights_path, device=str(DEVICE))
                     
                     # --- CẬP NHẬT CLASS NAMES ---
-                    if classes_path and os.path.exists(classes_path):
-                        try:
-                            with open(classes_path, 'r', encoding='utf-8') as f:
-                                custom_classes = [line.strip() for line in f.readlines()]
-                            model.CLASSES = tuple(custom_classes)
-                            logger.info(f"Loaded {len(custom_classes)} custom classes.")
-                        except Exception as e:
-                            logger.warning(f"Could not load classes file: {e}")
+                    try:
+                        model.CLASSES = tuple(config.classes)
+                        logger.info(f"Loaded {len(config.classes)} custom classes.")
+                    except Exception as e:
+                        logger.warning(f"Could not load classes file: {e}")
                     
                 except Exception as e:
                     logger.error(f"Failed to initialize detector: {e}")
