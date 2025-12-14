@@ -364,6 +364,7 @@ def predict():
                     unique_labels[pred['name']] = pred
 
             predictions = list(unique_labels.values())
+            
 
         return jsonify({
             'success': True,
